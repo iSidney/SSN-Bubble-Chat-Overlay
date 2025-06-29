@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SSN Custom Chat Overlay</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    /* === CONTENEUR PRINCIPAL === */
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: 'Inter', sans-serif;
+      background: transparent;
+      overflow: hidden;
+    }
+
+    .message-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      position: relative;
+    }
+
+    .message-wrapper.right {
+      align-items: flex-end;
+    }
+
+    /* === NOM DE L'UTILISATEUR === */
+    .name-bg {
+      position: relative;
+      background-color: #FD00FF;
+      border: 2px solid #003BFF;
+      padding: 6px 12px;
+      border-radius: 18px;
+      display: inline-block;
+      margin-bottom: 4px;
+      color: white;
+      max-width: 90%;
+      font-size: 1.1em;
+      font-weight: 600;
+      animation: username-slide 0.4s ease forwards;
+    }
+
+    .message-wrapper.right .name-bg {
+      background-color: #003BFF;
+      border-color: #FD00FF;
+    }
+
+    .name-bg::after {
+      content: "";
+      position: absolute;
+      width: 0;
+      height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 10px solid #FD00FF;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1;
+    }
+
+    .name-bg::before {
+      content: "";
+      position: absolute;
+      width: 0;
+      height: 0;
+      border-left: 9px solid transparent;
+      border-right: 9px solid transparent;
+      border-top: 12px solid #003BFF;
+      bottom: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 0;
+    }
+
+    .message-wrapper.right .name-bg::after {
+      border-top-color: #003BFF;
+    }
+
+    .message-wrapper.right .name-bg::before {
+      border-top-color: #FD00FF;
+    }
+
+    /* === MESSAGE BUBBLE === */
+    .text {
+      background-color: #FD00FF;
+      border: 2px solid #003BFF;
+      padding: 10px 16px;
+      border-radius: 20px;
+      display: inline-block;
+      color: white;
+      font-size: 0.95em;
+      max-width: 90%;
+      word-break: break-word;
+      animation: bubble-pop 0.4s ease forwards;
+    }
+
+    .message-wrapper.right .text {
+      background-color: #003BFF;
+      border-color: #FD00FF;
+    }
+
+    /* === ANIMATIONS === */
+    @keyframes bubble-pop {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes username-slide {
+      0% { opacity: 0; transform: translateX(-30px); }
+      100% { opacity: 1; transform: translateX(0); }
+    }
+
+    .message.visible .text {
+      animation: bubble-pop 0.4s ease forwards;
+    }
+
+    .message.visible .name-bg {
+      animation: username-slide 0.4s ease forwards;
+    }
+  </style>
+</head>
+<body>
+  <!-- SSN insèrera dynamiquement les messages ici -->
+</body>
+</html>

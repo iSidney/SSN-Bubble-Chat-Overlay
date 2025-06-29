@@ -126,6 +126,47 @@
   </style>
 </head>
 <body>
-  <!-- SSN insèrera dynamiquement les messages ici -->
+ <script>
+  // Récupérer l’ID de session dans l’URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const sessionId = urlParams.get("session") || "defaultRoom";
+  const password = "false";
+  const iframe = document.createElement("iframe");
+
+  // Connexion WebRTC à SSN (pas besoin de WebSocket pour un usage standard)
+  iframe.src = `https://vdo.socialstream.ninja/?ln&password=${password}&salt=vdo.ninja&label=overlay&exclude=${sessionId}&scene&novideo&noaudio&cleanoutput&room=${sessionId}`;
+  iframe.style.cssText = "width: 0px; height: 0px; position: fixed; left: -100px; top: -100px;";
+  document.body.appendChild(iframe);
+
+  window.addEventListener("message", function (e) {
+    if (e.source !== iframe.contentWindow) return;
+    const incoming = e.data?.dataReceived?.overlayNinja;
+    if (incoming) {
+      displayChatMessage(incoming);
+    }
+  });
+
+  function displayChatMessage(data) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "message-wrapper" + (data.side === "right" ? " right" : "");
+
+    const nameDiv = document.createElement("div");
+    nameDiv.className = "name-bg";
+    nameDiv.textContent = data.chatname || "";
+
+    const msgDiv = document.createElement("div");
+    msgDiv.className = "text";
+    msgDiv.textContent = data.chatmessage || "";
+
+    wrapper.appendChild(nameDiv);
+    wrapper.appendChild(msgDiv);
+    wrapper.classList.add("message", "visible");
+
+    document.body.appendChild(wrapper);
+
+    // Auto-suppression après 30 secondes
+    setTimeout(() => wrapper.remove(), 30000);
+  }
+</script>
 </body>
 </html>

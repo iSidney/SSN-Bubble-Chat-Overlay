@@ -126,47 +126,218 @@
   </style>
 </head>
 <body>
- <script>
-  // Récupérer l’ID de session dans l’URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const sessionId = urlParams.get("session") || "defaultRoom";
-  const password = "false";
-  const iframe = document.createElement("iframe");
-
-  // Connexion WebRTC à SSN (pas besoin de WebSocket pour un usage standard)
-  iframe.src = `https://vdo.socialstream.ninja/?ln&password=${password}&salt=vdo.ninja&label=overlay&exclude=${sessionId}&scene&novideo&noaudio&cleanoutput&room=${sessionId}`;
-  iframe.style.cssText = "width: 0px; height: 0px; position: fixed; left: -100px; top: -100px;";
-  document.body.appendChild(iframe);
-
-  window.addEventListener("message", function (e) {
-    if (e.source !== iframe.contentWindow) return;
-    const incoming = e.data?.dataReceived?.overlayNinja;
-    if (incoming) {
-      displayChatMessage(incoming);
+<script>
+    var urlParams = new URLSearchParams(window.location.search);
+    var roomID = "iWWnKL28tQ";
+    if (urlParams.has("session")) {
+        roomID = urlParams.get("session");
     }
-  });
+    var password = "false";
+    var featuredMode = false;
 
-  function displayChatMessage(data) {
-    const wrapper = document.createElement("div");
-    wrapper.className = "message-wrapper" + (data.side === "right" ? " right" : "");
+    const chatContainer = document.getElementById('chat-container');
+    const messageListWrapper = document.getElementById('message-list-wrapper');
+    const MAX_MESSAGES = 20; // Adjust as needed
+    const topSpacer = document.getElementById('spacer');
+	const messageTimestamps = new Map();
+    const MAX_SPACER_HEIGHT_BEFORE_RESET = 18000000; 
 
-    const nameDiv = document.createElement("div");
-    nameDiv.className = "name-bg";
-    nameDiv.textContent = data.chatname || "";
+    function adjustMessageWrapperScroll() {
+        requestAnimationFrame(() => {
+            const wrapperScrollHeight = messageListWrapper.scrollHeight;
+            const containerClientHeight = chatContainer.clientHeight;
+            
+            let translateY = 0;
+            if (wrapperScrollHeight > containerClientHeight) {
+                translateY = -(wrapperScrollHeight - containerClientHeight);
+            }
+            translateY = Math.min(0, translateY);
 
-    const msgDiv = document.createElement("div");
-    msgDiv.className = "text";
-    msgDiv.textContent = data.chatmessage || "";
+            messageListWrapper.style.transform = `translateY(${translateY}px)`;
+        });
+    }
+    
+	setInterval(() => {
+		const now = Date.now();
+		const messages = Array.from(messageListWrapper.children).filter(
+			child => child.id !== 'spacer' && child.classList.contains('message')
+		);
+		
+		messages.forEach(message => {
+			const timestamp = messageTimestamps.get(message.id);
+			if (timestamp) {
+				const age = now - timestamp;
+				
+				// After 30 seconds, start fading
+				if (age > 30000 && !message.classList.contains('fading')) {
+					message.classList.add('fading');
+				}
+			}
+		});
+	}, 1000); 
+	
+    function addMessageToOverlay(data) {
+		
+		if (!data.chatname && !data.chatmessage && !data.hasDonation && !data.donation && !data.contentimg){
+			return;
+		}
+		
+		const messageDiv = document.createElement('div');
+		messageDiv.classList.add('message');
+		
+		// Generate unique ID and track timestamp for aging
+		const messageId = data.mid || 'msg-' + Date.now();
+		messageDiv.id = messageId;
+		messageTimestamps.set(messageId, Date.now());
+		
+		var chatbadgesHtml = "";
+		if (data.chatbadges) {
+			data.chatbadges.forEach(badge => {
+				if (typeof badge === "object") {
+					if (badge.type === "img" && badge.src) {
+						chatbadgesHtml += `<img class='badge' src='${badge.src}' alt='badge'>`;
+					} else if (badge.type === "svg" && badge.html) {
+						chatbadgesHtml += `<span class='badge svg'>${badge.html}</span>`;
+					}
+				} else { 
+					chatbadgesHtml += `<img class='badge' src='${badge}' alt='badge'>`;
+				}
+			});
+		}
+		
+		let avatarBorderColor = "linear-gradient(45deg, #4ab8f9, #4cd137)"; // Default gradient
+		if (data.nameColor) {
+			avatarBorderColor = `linear-gradient(45deg, ${data.nameColor}, ${data.nameColor}88)`;
+		}
+		
+		let leftEdgeColor = null;
+		if (typeof getColorFromType === 'function' && data.type) {
+			try {
+				leftEdgeColor = getColorFromType(data.type);
+			} catch (e) {
+				console.error("Error getting color from type:", e);
+			}
+		}
+		
+		if (leftEdgeColor) {
+			messageDiv.style.borderLeft = `4px solid ${leftEdgeColor}`;
+			messageDiv.style.paddingLeft = '12px';
+		}
+		
+		const sourceIconHtml = data.type ? `<img src="https://socialstream.ninja/sources/images/${data.type}.png" alt="Source" class="source-icon">` : '';
+		const avatarHtml = data.chatimg ? 
+			`<div class="avatar-wrapper" style="background: ${avatarBorderColor}"><div class="avatar" style="background-image: url('${data.chatimg}');"></div></div>` : '';
+		const nameHtml = data.chatname ? `<div class="name-bg"><div class="name" ${data.nameColor ? `style="text-shadow: 0 0 3px ${data.nameColor}"` : ''}>${data.chatname}</div></div>` : '';
+		const membershipHtml = data.membership ? `<div class="membership-status">${data.membership}</div>` : '';
+		const messageTextHtml = `<div class="text" ${data.event ? 'style="font-style: italic;"' : ''}>${data.chatmessage ? data.chatmessage : ''}</div>`;
+		const donationHtml = data.hasDonation ? `<div class="donation">${data.hasDonation}</div>` : '';
+		
+		const contentImgHtml = data.contentimg ? 
+			`<div style="padding: 3px; border-radius: 12px; background: ${avatarBorderColor}; display: inline-block; margin-top: 10px;">
+				<img src="${data.contentimg}" alt="Content Image" class="large-image" style="margin-top: 0; border-radius: 8px;" onerror="this.parentNode.style.display='none';">
+			 </div>` : '';
 
-    wrapper.appendChild(nameDiv);
-    wrapper.appendChild(msgDiv);
-    wrapper.classList.add("message", "visible");
+		messageDiv.innerHTML = `
+			<div class="message-content-wrapper">
+				${avatarHtml}
+				<div class="message-text-meta">
+					<div>
+						${nameHtml}
+						${sourceIconHtml}
+						${chatbadgesHtml}
+					</div>
+					${membershipHtml}
+					${messageTextHtml}
+					${donationHtml}
+				</div>
+			</div>
+			${contentImgHtml}
+		`;
 
-    document.body.appendChild(wrapper);
+		messageListWrapper.appendChild(messageDiv);
+		void messageDiv.offsetWidth; 
+		messageDiv.classList.add('visible');
+		
+		const messages = Array.from(messageListWrapper.children).filter(
+			child => child.id !== 'spacer' && child.classList.contains('message') 
+		);
+		
+		if (messages.length > MAX_MESSAGES) {
+			const oldestMessage = messages[0]; 
+			
+			if (oldestMessage) {
+				const messageStyle = getComputedStyle(oldestMessage);
+				const marginBottom = parseFloat(messageStyle.marginBottom) || 0;
+				const spaceOccupiedByOldestMessage = oldestMessage.offsetHeight + marginBottom;
+				
+				const currentSpacerHeight = parseFloat(topSpacer.style.height) || 0;
+				let newPotentialSpacerHeight = currentSpacerHeight + spaceOccupiedByOldestMessage;
 
-    // Auto-suppression après 30 secondes
-    setTimeout(() => wrapper.remove(), 30000);
-  }
+				if (newPotentialSpacerHeight > MAX_SPACER_HEIGHT_BEFORE_RESET) {
+					console.log(`Spacer height (${newPotentialSpacerHeight}px) exceeded threshold (${MAX_SPACER_HEIGHT_BEFORE_RESET}px). Resetting to 0px.`);
+					newPotentialSpacerHeight = 0; // Reset the height
+				}
+				
+				topSpacer.style.height = newPotentialSpacerHeight + 'px';
+
+				messageTimestamps.delete(oldestMessage.id);
+				messageListWrapper.removeChild(oldestMessage);
+			}
+		}
+		
+		adjustMessageWrapperScroll();
+	}
+
+    var iframe = document.createElement("iframe");
+    if (featuredMode){
+        iframe.src = `https://vdo.socialstream.ninja/?ln&password=${password}&salt=vdo.ninja&label=overlay&exclude=${roomID}&scene&novideo&noaudio&cleanoutput&room=${roomID}`;
+    } else {
+        iframe.src = "https://vdo.socialstream.ninja/?ln&salt=vdo.ninja&password="+password+"&push&label=dock&vd=0&ad=0&novideo&noaudio&autostart&cleanoutput&room="+roomID; 
+    }
+    iframe.style.cssText = "width: 0px; height: 0px; position: fixed; left: -100px; top: -100px;";
+    document.body.appendChild(iframe);
+    window.addEventListener("message", function (e) {
+        if (e.source != iframe.contentWindow) return;
+        if (e.data.dataReceived && e.data.dataReceived.overlayNinja) {
+            addMessageToOverlay(e.data.dataReceived.overlayNinja);
+        }
+    });
+    
+    var conCon = 1;
+    var socketserver = false;
+    var serverURL = urlParams.has("localserver") ? "ws://127.0.0.1:3000" : "wss://io.socialstream.ninja";
+
+    function setupSocket(){
+        socketserver.onclose = function (){
+            setTimeout(function(){
+                conCon+=1;
+                socketserver = new WebSocket(serverURL);
+                setupSocket();
+            },100*conCon);
+        };
+        socketserver.onopen = function (){
+            conCon = 1;
+            socketserver.send(JSON.stringify({"join":roomID, "out":3, "in":4}));
+        };
+        socketserver.addEventListener('message', function (event) {
+            if (event.data){
+                try {
+                    var data = JSON.parse(event.data);
+                    if (data) { 
+                        addMessageToOverlay(data);
+                    }
+                } catch (error) {
+                    console.error("Error processing WebSocket message:", error, "Data:", event.data);
+                }
+            }
+        });
+    }
+    
+    if (urlParams.has("server") || urlParams.has("server2")){
+        serverURL = urlParams.get("server") ||  urlParams.get("server2") || serverURL;
+        socketserver = new WebSocket(serverURL);
+        setupSocket();
+    }
 </script>
 </body>
 </html>
